@@ -10,6 +10,29 @@ import tempfile
 import os
 from dotenv import load_dotenv
 
+from langchain.prompts import PromptTemplate
+from langchain.chains import RetrievalQA
+
+# Define a strict prompt
+qa_prompt = PromptTemplate(
+    template="""
+You are a helpful assistant for answering questions based on documents.
+Use only the following context to answer the question.
+If the answer is not contained in the context, say: "I don't know".
+
+Context:
+{context}
+
+Question: {question}
+Answer:""",
+    input_variables=["context", "question"]
+)
+
+
+
+
+
+
 # Ensure event loop exists (for Streamlit + async libs)
 try:
     asyncio.get_running_loop()
@@ -61,7 +84,14 @@ if uploaded_file:
         st.caption("Using Gemini")
 
     db = FAISS.from_documents(docs, embeddings)
-    qa = RetrievalQA.from_chain_type(llm, retriever=db.as_retriever())
+    # qa = RetrievalQA.from_chain_type(llm, retriever=db.as_retriever())
+    # Build QA chain with the custom prompt
+    qa = RetrievalQA.from_chain_type(
+        llm,
+        retriever=db.as_retriever(),
+        chain_type="stuff",
+        chain_type_kwargs={"prompt": qa_prompt}
+    )
 
     st.success("PDF processed! Ask your questions below:")
 
