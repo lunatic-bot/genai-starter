@@ -5,13 +5,16 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain.chains import RetrievalQA
-from openai.error import RateLimitError
+# from openai.error import RateLimitError
+from openai import RateLimitError
+from openai import RateLimitError, APIError, APIConnectionError
+
+
 import tempfile
 import os
 from dotenv import load_dotenv
 
 from langchain.prompts import PromptTemplate
-from langchain.chains import RetrievalQA
 
 # Define a strict prompt
 qa_prompt = PromptTemplate(
@@ -29,10 +32,6 @@ Answer:""",
 )
 
 
-
-
-
-
 # Ensure event loop exists (for Streamlit + async libs)
 try:
     asyncio.get_running_loop()
@@ -48,8 +47,8 @@ if not openai_key and not google_key:
     st.error("Please set at least one API key in your .env file (OPENAI_API_KEY or GOOGLE_API_KEY).")
     st.stop()
 
-st.set_page_config(page_title="📚 PDF QA Bot (Failover)", page_icon="🤖", layout="wide")
-st.title("📚 PDF Question-Answer Bot — OpenAI → Gemini Failover")
+st.set_page_config(page_title="PDF QA Bot (Failover)", page_icon="🤖", layout="wide")
+st.title("PDF Question-Answer Bot — OpenAI → Gemini Failover")
 
 # Upload PDF
 uploaded_file = st.file_uploader("Upload a PDF", type="pdf")
@@ -75,7 +74,7 @@ if uploaded_file:
         else:
             raise ValueError("No OpenAI key found, using Gemini...")
     except Exception as e:
-        st.warning(f"⚠️ OpenAI unavailable ({e}), switching to Gemini.")
+        st.warning(f"OpenAI unavailable ({e}), switching to Gemini.")
         use_gemini = True
 
     if use_gemini and google_key:
@@ -98,20 +97,38 @@ if uploaded_file:
     query = st.text_input("Your Question:")
     if query:
         with st.spinner("Thinking..."):
+            # try:
+            #     answer = qa.run(query)
+            # except RateLimitError:
+            #     st.warning("OpenAI quota exceeded. Switching to Gemini...")
+            #     if google_key:
+            #         embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=google_key)
+            #         llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=google_key)
+            #         db = FAISS.from_documents(docs, embeddings)
+            #         qa = RetrievalQA.from_chain_type(llm, retriever=db.as_retriever())
+            #         answer = qa.run(query)
+            #         st.caption("Now using Gemini")
+            #     else:
+            #         st.error("No Gemini key available for failover.")
+            #         st.stop()
+
+            
+
             try:
                 answer = qa.run(query)
-            except RateLimitError:
-                st.warning("OpenAI quota exceeded. Switching to Gemini...")
+            except (RateLimitError, APIError, ServiceUnavailableError) as e:
+                st.warning(f"⚠️ OpenAI error: {e}. Switching to Gemini...")
                 if google_key:
                     embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=google_key)
                     llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", google_api_key=google_key)
                     db = FAISS.from_documents(docs, embeddings)
                     qa = RetrievalQA.from_chain_type(llm, retriever=db.as_retriever())
                     answer = qa.run(query)
-                    st.caption("Now using Gemini")
+                    st.caption("🔄 Now using Gemini")
                 else:
-                    st.error("No Gemini key available for failover.")
+                    st.error("❌ No Gemini key available for failover.")
                     st.stop()
+
 
         st.markdown(f"**Answer:** {answer}")
 
