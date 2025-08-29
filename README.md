@@ -1,14 +1,14 @@
 ---
-# GenAI Starter Kit
+# GenAI Basic Projects
 
-A **14-day fast-track learning project** for Generative AI developers, built for **Python + FastAPI** enthusiasts.
+A **fast-track learning project** for Generative AI developers, built for **Python + FastAPI** enthusiasts.
 This repo contains ready-to-run GenAI apps with **OpenAI API**, **LangChain**, **RAG**, and **Streamlit UIs**.
 ---
 
 ## Project Structure
 
 ```
-genai-starter/
+GenAI-BasicProjects/
 │
 ├── README.md                  # This guide
 ├── requirements.txt           # All dependencies
@@ -46,8 +46,8 @@ genai-starter/
 ### Clone the repo
 
 ```bash
-git clone https://github.com/lunatic-bot/genai-starter.git
-cd genai-starter
+git clone https://github.com/lunatic-bot/GenAI-BasicProjects.git
+cd GenAI-BasicProjects
 ```
 
 ### Install dependencies
